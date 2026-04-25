@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hm... 🤔</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Nunito:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a96e;
+    --gold-light: #e8d5b0;
+    --cream: #fdf8f2;
+    --deep: #1a1209;
+    --blush: #f0e0c8;
+    --text: #3d2b1a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: var(--deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Background subtle glow */
+  .bg-glow {
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 50%, rgba(201,169,110,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Floating particles */
+  .particle {
+    position: fixed;
+    border-radius: 50%;
+    background: var(--gold);
+    pointer-events: none;
+    opacity: 0;
+    animation: floatUp linear infinite;
+  }
+
+  /* Main card */
+  .card {
+    position: relative;
+    text-align: center;
+    padding: 3.5rem 3rem;
+    max-width: 520px;
+    width: calc(100% - 3rem);
+    z-index: 10;
+    animation: cardIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(201,169,110,0.2);
+    pointer-events: none;
+  }
+
+  /* Decorative corner lines */
+  .corner {
+    position: absolute;
+    width: 28px; height: 28px;
+    border-color: rgba(201,169,110,0.5);
+    border-style: solid;
+  }
+  .corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+  .corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+  .corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+  .corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+  /* Step indicator */
+  .step-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: rgba(201,169,110,0.25);
+    transition: background 0.4s, transform 0.4s;
+  }
+  .dot.active {
+    background: var(--gold);
+    transform: scale(1.3);
+  }
+
+  /* Emoji / icon */
+  .card-emoji {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    display: block;
+    animation: wiggle 2s ease-in-out infinite;
+  }
+
+  /* Question text */
+  .question {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--cream);
+    line-height: 1.5;
+    margin-bottom: 0.6rem;
+    transition: all 0.5s ease;
+  }
+
+  .question-sub {
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    color: rgba(201,169,110,0.6);
+    margin-bottom: 3rem;
+    font-style: italic;
+    min-height: 1.2em;
+    transition: all 0.4s ease;
+  }
+
+  /* Button container */
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    position: relative;
+  }
+
+  /* YES button */
+  .btn-yes {
+    background: transparent;
+    border: 1px solid var(--gold);
+    color: var(--gold-light);
+    font-family: 'Nunito', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .btn-yes::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    z-index: 0;
+  }
+  .btn-yes:hover::before { transform: scaleX(1); }
+  .btn-yes:hover { color: var(--deep); }
+  .btn-yes span { position: relative; z-index: 1; }
+
+  /* NO button — runs away */
+  .btn-no {
+    background: transparent;
+    border: 1px solid rgba(201,169,110,0.2);
+    color: rgba(201,169,110,0.4);
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 300;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    padding: 0.6rem 1.4rem;
+    transition: color 0.3s, border-color 0.3s, transform 0.15s;
+    position: absolute;
+  }
+  .btn-no:hover { border-color: rgba(201,169,110,0.4); }
+
+  /* Confetti burst */
+  .confetti-piece {
+    position: fixed;
+    pointer-events: none;
+    z-index: 100;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+
+  /* Fade transition overlay */
+  .transition-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--deep);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+  .transition-overlay.fade-in { opacity: 1; pointer-events: all; }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    10% { opacity: 0.3; }
+    90% { opacity: 0.1; }
+    100% { transform: translateY(-10vh); opacity: 0; }
+  }
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  @keyframes popIn {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px); }
+    40% { transform: translateX(8px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+  }
+  @keyframes questionFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+<div class="transition-overlay" id="overlay"></div>
+
+<div class="card" id="card">
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <div class="step-dots">
+    <div class="dot active" id="dot-1"></div>
+    <div class="dot" id="dot-2"></div>
+    <div class="dot" id="dot-3"></div>
+  </div>
+
+  <span class="card-emoji" id="emoji">🎂</span>
+
+  <p class="question" id="question" style="font-size: clamp(1.4rem, 4vw, 2rem);">
+    Apakah benar kamu adalah<br>perempuan yang sedang<br>berulang tahun hari ini?
+  </p>
+  <p class="question-sub" id="question-sub">Jawab dengan jujur ya...</p>
+
+  <div class="btn-group" id="btn-group" style="min-height: 140px;">
+    <button class="btn-yes" id="btn-yes" style="font-size: 0.82rem; padding: 0.9rem 2.8rem;" onclick="handleYes()">
+      <span>✦ Iya, itu aku ✦</span>
+    </button>
+    <button class="btn-no" id="btn-no" style="bottom: 0; left: 50%; transform: translateX(-50%);" onmouseover="runAway(this)" onclick="handleNo()">
+      Bukan aku
+    </button>
+  </div>
+</div>
+
+<script>
+  let step = 0;
+  let noPos = { x: 0, y: 0 };
+
+  const steps = [
+    {
+      emoji: '🎂',
+      question: 'Apakah benar kamu adalah<br>perempuan yang sedang<br>berulang tahun hari ini?',
+      sub: 'Jawab dengan jujur ya...',
+      yesBtnSize: 'font-size: 0.82rem; padding: 0.9rem 2.8rem;',
+      yesLabel: '✦ Iya, itu aku ✦',
+    },
+    {
+      emoji: '🤔',
+      question: 'Hmm... yakin? Beneran<br>kamu yang ulang tahun<br>hari ini?',
+      sub: 'Mas perlu konfirmasi ulang nih...',
+      yesBtnSize: 'font-size: 1.05rem; padding: 1.2rem 3.6rem;',
+      yesLabel: '✦ Iya beneran aku ✦',
+    },
+    {
+      emoji: '🥹',
+      question: 'Oke terakhir ya, ini<br>benar-benar kamu kan?<br>Yang ulang tahun ke-31?',
+      sub: 'Kalau beneran... ada sesuatu buat kamu 🤍',
+      yesBtnSize: 'font-size: 1.35rem; padding: 1.6rem 4.4rem;',
+      yesLabel: '✦ IYA ITU AKU ✦',
+    },
+  ];
+
+  // Spawn particles
+  function spawnParticles() {
+    for (let i = 0; i < 18; i++) {
+      setTimeout(() => {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        const size = Math.random() * 3 + 1;
+        p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;animation-duration:${8+Math.random()*10}s;animation-delay:${Math.random()*4}s;`;
+        document.body.appendChild(p);
+      }, i * 250);
+    }
+  }
+  spawnParticles();
+
+  // No button runs away
+  function runAway(btn) {
+    const card = document.getElementById('btn-group');
+    const cardRect = card.getBoundingClientRect();
+    const btnRect = btn.getBoundingClientRect();
+
+    const maxX = cardRect.width / 2 - btnRect.width / 2 - 10;
+    const maxY = 60;
+
+    const newX = (Math.random() - 0.5) * maxX * 2;
+    const newY = (Math.random() - 0.3) * maxY * 2;
+
+    btn.style.transition = 'all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    btn.style.left = '50%';
+    btn.style.transform = `translateX(calc(-50% + ${newX}px)) translateY(${newY}px)`;
+  }
+
+  function handleNo() {
+    // Just shake the card slightly
+    const card = document.getElementById('card');
+    card.style.animation = 'shake 0.4s ease';
+    setTimeout(() => { card.style.animation = ''; }, 400);
+  }
+
+  function handleYes() {
+    if (step >= 2) {
+      // Final step — launch confetti then redirect
+      launchConfetti();
+      setTimeout(() => {
+        const overlay = document.getElementById('overlay');
+        overlay.classList.add('fade-in');
+        setTimeout(() => {
+          window.location.href = './birthday.html';
+        }, 700);
+      }, 1200);
+      return;
+    }
+
+    step++;
+
+    // Small confetti burst on each yes
+    launchConfettiSmall();
+
+    const s = steps[step];
+    const q = document.getElementById('question');
+    const sub = document.getElementById('question-sub');
+    const emoji = document.getElementById('emoji');
+    const btnYes = document.getElementById('btn-yes');
+    const btnNo = document.getElementById('btn-no');
+
+    // Update dots
+    document.querySelectorAll('.dot').forEach((d, i) => {
+      d.classList.toggle('active', i === step);
+    });
+
+    // Animate out
+    q.style.opacity = '0';
+    q.style.transform = 'translateY(-10px)';
+    sub.style.opacity = '0';
+    emoji.style.opacity = '0';
+    btnYes.style.opacity = '0';
+    btnYes.style.transform = 'scale(0.8)';
+
+    setTimeout(() => {
+      // Update content
+      q.innerHTML = s.question;
+      sub.textContent = s.sub;
+      emoji.textContent = s.emoji;
+      btnYes.style.cssText += s.yesBtnSize;
+      btnYes.querySelector('span').textContent = s.yesLabel;
+
+      // Reset no button position
+      btnNo.style.transform = 'translateX(-50%)';
+      btnNo.style.transition = 'none';
+      setTimeout(() => { btnNo.style.transition = ''; }, 50);
+
+      // Animate in
+      q.style.transition = 'all 0.5s ease';
+      q.style.opacity = '1';
+      q.style.transform = 'translateY(0)';
+      sub.style.transition = 'all 0.5s ease 0.1s';
+      sub.style.opacity = '1';
+      emoji.style.transition = 'all 0.4s ease';
+      emoji.style.opacity = '1';
+      btnYes.style.transition = 'opacity 0.5s ease 0.15s, transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s, background 0.35s ease';
+      btnYes.style.opacity = '1';
+      btnYes.style.transform = 'scale(1)';
+    }, 320);
+  }
+
+  function launchConfettiSmall() {
+    const colors = ['#c9a96e', '#e8d5b0', '#f0d898', '#fdf8f2', '#e8c4a0'];
+    for (let i = 0; i < 20; i++) {
+      const c = document.createElement('div');
+      c.className = 'confetti-piece';
+      const size = Math.random() * 8 + 4;
+      c.style.cssText = `
+        width:${size}px; height:${size * (Math.random() > 0.5 ? 1 : 2.5)}px;
+        background:${colors[Math.floor(Math.random() * colors.length)]};
+        left:${30 + Math.random() * 40}%;
+        top:${20 + Math.random() * 30}%;
+        animation-duration:${1.2 + Math.random() * 0.8}s;
+        animation-delay:${Math.random() * 0.2}s;
+        transform: rotate(${Math.random() * 360}deg);
+      `;
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 2200);
+    }
+  }
+
+  function launchConfetti() {
+    const colors = ['#c9a96e', '#e8d5b0', '#f0d898', '#fdf8f2', '#e8c4a0', '#ffffff'];
+    for (let i = 0; i < 80; i++) {
+      setTimeout(() => {
+        const c = document.createElement('div');
+        c.className = 'confetti-piece';
+        const size = Math.random() * 10 + 5;
+        c.style.cssText = `
+          width:${size}px; height:${size * (Math.random() > 0.5 ? 1 : 2.5)}px;
+          background:${colors[Math.floor(Math.random() * colors.length)]};
+          left:${Math.random() * 100}%;
+          top:-20px;
+          animation-duration:${1.8 + Math.random() * 1.2}s;
+          animation-delay:0s;
+          border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+        `;
+        document.body.appendChild(c);
+        setTimeout(() => c.remove(), 3500);
+      }, i * 18);
+    }
+  }
+</script>
+</body>
+</html>
