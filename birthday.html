@@ -686,13 +686,16 @@
     align-items: center;
     gap: 0.8rem;
     background: rgba(20,13,6,0.92);
-    border: 1px solid rgba(201,169,110,0.25);
+    border: 1px solid rgba(201,169,110,0.35);
     padding: 0.75rem 1.2rem;
     backdrop-filter: blur(10px);
-    opacity: 0;
-    transition: opacity 0.5s ease;
+    opacity: 1;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 0 20px rgba(201,169,110,0.08);
+    cursor: pointer;
   }
   #music-bar.show { opacity: 1; }
+  #music-bar.playing { border-color: rgba(201,169,110,0.6); box-shadow: 0 0 24px rgba(201,169,110,0.18); }
 
   #music-bar button {
     background: none;
@@ -858,10 +861,10 @@
 
 <!-- MUSIC BAR -->
 <div id="music-bar">
-  <div class="music-bars" id="bars">
+  <div class="music-bars paused" id="bars">
     <span></span><span></span><span></span><span></span>
   </div>
-  <span class="music-label">Playing for you...</span>
+  <span class="music-label" id="music-label">♪ For You</span>
   <button onclick="toggleMusic()" id="music-btn" title="Play/Pause">
     <svg id="play-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <polygon points="5,3 19,12 5,21" fill="currentColor"/>
@@ -1031,41 +1034,56 @@
   </div>
 </section>
 
-<!-- YOUTUBE IFRAME (hidden) -->
-<iframe id="yt-player" style="display:none" allow="autoplay"></iframe>
-
 <script>
   // ── YOUTUBE AUDIO ──
-  let ytPlayer, isPlaying = false, ytReady = false;
+  let ytPlayer, isPlaying = false, ytReady = false, ytLoading = false;
 
   function loadYT() {
+    if (ytLoading) return;
+    ytLoading = true;
+    const existing = document.getElementById('yt-api-script');
+    if (existing) { existing.remove(); }
     const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
+    tag.id = 'yt-api-script';
+    tag.src = 'https://www.youtube.com/iframe_api';
     document.head.appendChild(tag);
   }
 
   window.onYouTubeIframeAPIReady = function () {
-    ytPlayer = new YT.Player('yt-player', {
+    const playerDiv = document.createElement('div');
+    playerDiv.id = 'yt-player-div';
+    playerDiv.style.cssText = 'position:fixed;bottom:-10px;left:-10px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;z-index:-1;';
+    document.body.appendChild(playerDiv);
+
+    ytPlayer = new YT.Player('yt-player-div', {
       height: '1', width: '1',
       videoId: 'iygXgP2nOF4',
-      playerVars: { autoplay: 0, loop: 1, playlist: 'iygXgP2nOF4' },
+      playerVars: { autoplay: 1, loop: 1, playlist: 'iygXgP2nOF4', mute: 0 },
       events: {
-        onReady: () => { ytReady = true; }
+        onReady: function(e) {
+          ytReady = true;
+          e.target.setVolume(70);
+          e.target.playVideo();
+          setTimeout(function() {
+            isPlaying = true;
+            updateMusicUI();
+            document.getElementById('music-label').textContent = '\u266a For You';
+          }, 600);
+        },
+        onStateChange: function(e) {
+          if (e.data === 1) { isPlaying = true; updateMusicUI(); }
+          else if (e.data === 2 || e.data === 0) { isPlaying = false; updateMusicUI(); }
+        }
       }
     });
   };
 
-  function startMusic() {
-    if (ytReady) {
-      ytPlayer.playVideo();
-      isPlaying = true;
-      document.getElementById('music-bar').classList.add('show');
-      updateMusicUI();
-    }
-  }
-
   function toggleMusic() {
-    if (!ytReady) return;
+    if (!ytReady) {
+      document.getElementById('music-label').textContent = 'Memuat...';
+      loadYT();
+      return;
+    }
     if (isPlaying) { ytPlayer.pauseVideo(); isPlaying = false; }
     else { ytPlayer.playVideo(); isPlaying = true; }
     updateMusicUI();
@@ -1074,11 +1092,14 @@
   function updateMusicUI() {
     const bars = document.getElementById('bars');
     const icon = document.getElementById('play-icon');
+    const bar = document.getElementById('music-bar');
     if (isPlaying) {
       bars.classList.remove('paused');
+      bar.classList.add('playing');
       icon.innerHTML = '<rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/>';
     } else {
       bars.classList.add('paused');
+      bar.classList.remove('playing');
       icon.innerHTML = '<polygon points="5,3 19,12 5,21" fill="currentColor"/>';
     }
   }
@@ -1087,7 +1108,6 @@
   function openCurtain() {
     document.getElementById('curtain').classList.add('hidden');
     loadYT();
-    setTimeout(startMusic, 1500);
     spawnParticles();
   }
 
